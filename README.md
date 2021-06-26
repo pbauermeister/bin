@@ -1,1 +1,3 @@
-# misc
+# bin
+
+Misc scripts.
