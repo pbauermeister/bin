@@ -127,9 +127,8 @@ maximize_desired() {
     echo "> Maxed."
 }
 
-doit () {
-    echo "===== EVENT: $MODE ====="
-    echo "$STATE"
+doit_1() {
+    # toggles between max and normal
     if is_maximized_any; then
 	echo "Is maxed."
 	unmaximize
@@ -137,6 +136,29 @@ doit () {
 	echo "Is not maxed."
 	maximize_desired
     fi
+}
+
+doit_2() {
+    # toggles anything and desired max (may move between two maxes:
+    # other-max to desired-max)
+    if is_maximized_desired; then
+	echo "Is maxed as desired => unmax"
+	unmaximize
+    else
+	echo "Is NOT maxed as desired => will max"
+	if is_maximized_any; then
+	    echo "But is maxed, however not as desired => first, unmax"
+	    unmaximize
+	fi
+	echo "=> max"
+	maximize_desired
+    fi
+}
+
+doit () {
+    echo "===== EVENT: $MODE ====="
+    echo "$STATE"
+    doit_2
 }
 
 doit > "$LOG_FILE" 2>&1
