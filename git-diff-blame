@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# This script does a git diff diff between two REFs, displaying
+# additionally blame information.
+
+set -e
+
+# some rare 3rd party files have spaces in the name
+IFS=$'\n'  # https://askubuntu.com/a/344418
+
+# parse commandline args
+rev1=$1
+rev2=$2
+if [ -z "$rev2" ]; then
+    echo "usage: $0 REV1 REV2"
+    exit 1
+fi
+
+# get git url of current repo
+url=$(cat .git/config | grep -w 'url' | head -1 | sed 's/.*= *//g')
+
+# define tmp dirs
+tmp=/tmp/git-diff-blame-$$
+tmp1=$tmp/rev1
+tmp2=$tmp/rev2
+
+# clone rev1
+rm -rf $tmp1; mkdir -p $tmp1
+( cd $tmp1; git clone --branch $rev1 $url )
+
+# copy and checkout rev2
+rm -rf $tmp2; cp -a $tmp1 $tmp2
+(cd $tmp2/*; git checkout $rev2)
+
+# generate full blames
+make_blame() {
+    echo "Making blames for $2..."
+    (
+	cd $1/*
+	files=$(git ls-tree -r --name-only $2 | grep -v '^mordor$')
+	for file in $files; do
+	    #echo "$file $2"
+	    git blame --show-name -M $file \
+		| sed 's/\(  *[0-9][0-9]*)\)/)/'
+	    #     ^ remove the "N)" line number
+	    #| sed "s|^|$file: |g"
+	done > ../.blame
+    )
+}
+make_blame $tmp1 $rev1
+make_blame $tmp2 $rev2
+
+# compare blames
+diff -U2 --color=always $tmp/*/.blame | less
+rm -rf $tmp
